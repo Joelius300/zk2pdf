@@ -1,8 +1,7 @@
 import json
-import os
+import fire
 import re
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -26,9 +25,8 @@ def format_to_note(formatted_output: str):
 
 def get_output(*args: str):
     command = ["zk", *args]
-    out = subprocess.run(command, capture_output=True, text=True, check=True)
-    # print(os.getcwd())
     # print(" ".join(command))
+    out = subprocess.run(command, capture_output=True, text=True, check=True)
     return out.stdout
 
 
@@ -37,8 +35,8 @@ def output_to_notes(output: str):
     return [format_to_note(line) for line in lines]
 
 
-def create_docs(tag: str, link_depth: int):
-    boilerplate_args = ["--format", format_str, "-q", "--no-pager"]
+def create_docs(tag: str, link_depth: int = 0, sort=True):
+    boilerplate_args = ["--format", format_str, "-q", "--no-pager", "--sort", "path"]
     tagged_notes = get_output("list", "-t", tag, *boilerplate_args)
     tagged_notes = output_to_notes(tagged_notes)
     if link_depth > 0:
@@ -51,7 +49,8 @@ def create_docs(tag: str, link_depth: int):
 
     all_notes = tagged_notes + linked_notes
     all_notes = [n for n in all_notes if n.title != tag]  # we don't care about the index note where title==tag
-    all_notes = list(sorted(all_notes, key=lambda n: n.title.lower()))  # sort alphabetically by title
+    if sort:
+        all_notes = list(sorted(all_notes, key=lambda n: n.title.lower()))  # sort alphabetically by title
 
     id_replacement = {f'[{n.id}]': n.title for n in all_notes}
     compiled_regex = re.compile("|".join(map(re.escape, id_replacement)))
@@ -90,4 +89,5 @@ fontsize: 10pt
 
 if __name__ == '__main__':
     # if it gets more complicated with args, try Fire!
-    create_docs(sys.argv[1], int(sys.argv[2]) if len(sys.argv) > 2 else 0)
+    # create_docs(sys.argv[1], int(sys.argv[2]) if len(sys.argv) > 2 else 0)
+    fire.Fire(create_docs)
